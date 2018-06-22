@@ -1,2 +1,2 @@
 enqueue all assumptions at once;
-do not backtrack past level one on restarts and leanrt units
+do not backtrack past level one on restarts and learnt units
