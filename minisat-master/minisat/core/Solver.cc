@@ -131,6 +131,8 @@ Var Solver::newVar(lbool upol, bool dvar)
     vardata  .insert(v, mkVarData(CRef_Undef, 0));
     activity .insert(v, rnd_init_act ? drand(random_seed) * 0.00001 : 0);
     seen     .insert(v, 0);
+    is_assumption.push(false);
+    is_abbr.push(false);
     polarity .insert(v, true);
     user_pol .insert(v, upol);
     decision .reserve(v);
@@ -765,6 +767,30 @@ lbool Solver::search(int nof_conflicts)
             if (learnt_clause.size() == 1){
                 uncheckedEnqueue(learnt_clause[0]);
             }else{
+                abbrs.push();
+                int i, j;
+                for (i = j = 1; i < learnt_clause.size(); i++) {
+                    if (!is_assumption[var(learnt_clause[i])] && !is_abbr[var(learnt_clause[i])]) {
+                        learnt_clause[j++] = learnt_clause[i];
+                    }
+                    else {
+                        abbrs[abbrs.size()-1].push(learnt_clause[i]);
+                    }
+                }
+                learnt_clause.shrink(i - j);
+                
+                if (abbrs[abbrs.size()-1].size() == 1)
+                    learnt_clause.push(abbrs[abbrs.size()-1][0]);
+                else if (abbrs[abbrs.size()-1].size() > 1) {
+                    Var v = newVar(l_True, false);
+                    is_abbr[v] = true;
+                    learnt_clause.push(mkLit(v, 0));
+                    Lit vneg = mkLit(v, 1);
+                    abbrs[abbrs.size()-1].push(vneg);
+                    assigns[v] = l_False;
+                    vardata[v] = mkVarData(CRef_Undef, 1);
+                }
+                
                 CRef cr = ca.alloc(learnt_clause, true);
                 learnts.push(cr);
                 attachClause(cr);
@@ -818,7 +844,25 @@ lbool Solver::search(int nof_conflicts)
                 }
             }
             else if (decisionLevel() > 0) {
-
+                if (decisionLevel() == 1) {
+                    for (int i = 0; i < abbrs.size(); i++) {
+                        bool lit_not_false = true;
+                        for (int j = 0; i < abbrs[i].size()-1; j++) {
+                            if (value(abbrs[i][j]) != l_False) {
+                                lit_not_false = false;
+                            }
+                        }
+                        Var v = var(abbrs[i][abbrs.size()-1]);
+                        if (lit_not_false == false) {
+                            assigns[v] = l_True;
+                            vardata[v] = mkVarData(CRef_Undef, 1);
+                        }
+                        else {
+                            assigns[v] = l_False;
+                            vardata[v] = mkVarData(CRef_Undef, 1);
+                        }
+                    }
+                }
                 if (next == lit_Undef){
                     // New variable decision:
                     decisions++;
@@ -888,6 +932,10 @@ lbool Solver::solve_()
     if (!ok) return l_False;
 
     solves++;
+    
+    for (int i = 0; i < assumptions.size(); i++) {
+        is_assumption[i] = true;
+    }
 
     max_learnts = nClauses() * learntsize_factor;
     if (max_learnts < min_learnts_lim)

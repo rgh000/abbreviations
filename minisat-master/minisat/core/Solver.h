@@ -145,6 +145,7 @@ public:
 
     int       learntsize_adjust_start_confl;
     double    learntsize_adjust_inc;
+    vec< vec<Lit> >     abbrs;
 
     // Statistics: (read-only member variable)
     //
@@ -200,6 +201,8 @@ protected:
     VMap<char>          decision;         // Declares if a variable is eligible for selection in the decision heuristic.
     vec<Lit>            levelZeroUnits;
     VMap<VarData>       vardata;          // Stores reason and level for each variable.
+    vec<bool>            is_assumption;
+    vec<bool>            is_abbr;
     OccLists<Lit, vec<Watcher>, WatcherDeleted, MkIndexLit>
                         watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
 
