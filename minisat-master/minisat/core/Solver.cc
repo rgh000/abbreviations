@@ -366,7 +366,7 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel)
     // Find correct backtrack level:
     //
     if (out_learnt.size() == 1)
-        out_btlevel = 0;
+        out_btlevel = 1;
     else{
         int max_i = 1;
         // Find the first literal assigned at the next-highest level:
@@ -523,6 +523,14 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
     trail.push_(p);
 }
 
+void Solver::uncheckedEnqueueZero(Lit p)
+{
+    assert(value(p) == l_Undef);
+    assigns[var(p)] = lbool(!sign(p));
+    vardata[var(p)] = mkVarData(CRef_Undef, 0);
+    trail.push_(p);
+    levelZeroUnits.push(p);
+}
 
 /*_________________________________________________________________________________________________
 |
@@ -784,7 +792,7 @@ lbool Solver::search(int nof_conflicts)
             if ((nof_conflicts >= 0 && conflictC >= nof_conflicts) || !withinBudget()){
                 // Reached bound on number of conflicts:
                 progress_estimate = progressEstimate();
-                cancelUntil(0);
+                cancelUntil(1);
                 return l_Undef; }
 
             // Simplify the set of problem clauses:
@@ -917,6 +925,12 @@ lbool Solver::solve_()
         ok = false;
 
     cancelUntil(0);
+    for (int i = 0; i < levelZeroUnits.size(); i++) {
+        uncheckedEnqueue(levelZeroUnits[i]);
+        levelZeroUnits[i] = lit_Undef;
+        printf("enqueing %d %d\n", var(levelZeroUnits[i]), sign(levelZeroUnits[i]));
+    }
+    levelZeroUnits.shrink(levelZeroUnits.size());
     return status;
 }
 
