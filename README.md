@@ -1,1 +1,1 @@
-original minisat for maxhs
+enqueue all assumptions at once
