@@ -1,1 +1,1 @@
-# abbreviations
+original minisat for maxhs
